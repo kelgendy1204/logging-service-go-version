@@ -25,7 +25,7 @@ func TestLogsLimitPerChannel(t *testing.T) {
         t.Fatalf("Logs exceeded the limit");
     }
 
-    if logs[0].data != "data 2" {
+    if logs[0].Data != "data 2" {
         t.Fatalf("When logs exceeded limit the data isn't replaced correctly");
     }
 }
