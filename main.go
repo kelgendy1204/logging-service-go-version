@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,6 +13,24 @@ var server = setupSocketServer()
 type LogRequest struct {
 	Channel string  `json:"channel"`
 	Data    logData `json:"data"`
+}
+
+func GinMiddleware(allowOrigin string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, Content-Length, X-CSRF-Token, Token, session, Origin, Host, Connection, Accept-Encoding, Accept-Language, X-Requested-With")
+
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Request.Header.Del("Origin")
+
+		c.Next()
+	}
 }
 
 func postLog(c *gin.Context) {
@@ -45,13 +62,6 @@ func postLog(c *gin.Context) {
 func main() {
 	router := gin.Default()
 
-	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
-	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-	config.AllowHeaders = []string{"Origin", "Content-Type", "Content-Length", "Authorization", "Accept", "X-Requested-With"}
-
-	router.Use(cors.New(config))
-
 	go func() {
 		if err := server.Serve(); err != nil {
 			log.Fatalf("socketio listen error: %s\n", err)
@@ -59,6 +69,8 @@ func main() {
 	}()
 
 	defer server.Close()
+
+    router.Use(GinMiddleware("http://localhost:3000"))
 
 	router.GET("/socket.io/*any", gin.WrapH(server))
 	router.POST("/socket.io/*any", gin.WrapH(server))
